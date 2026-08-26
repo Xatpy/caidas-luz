@@ -23,7 +23,7 @@ El sistema funciona con Python 3 sin necesidad de instalar librerías externas (
 3. **Generar/Actualizar el Dashboard HTML:**
    ```bash
    python3 script.py html
-   open index.html
+   open docs/index.html
    ```
 
 4. **Consultar cualquier otro municipio:**
@@ -37,11 +37,11 @@ El sistema funciona con Python 3 sin necesidad de instalar librerías externas (
 
 | Archivo | Descripción |
 |---|---|
-| [`script.py`](file:///Users/jaime/workspace/caidas-luz/script.py) | Script principal de consulta, deduplicación, cálculo de retrasos y generación de informes. |
-| [`index.html`](file:///Users/jaime/workspace/caidas-luz/index.html) | Dashboard visual e interactivo con métricas, gráficos de frecuencia (Chart.js) y control de aplazamientos. |
-| [`averias.db`](file:///Users/jaime/workspace/caidas-luz/averias.db) | Base de datos SQLite3 con el historial unificado y trazabilidad completa de incidencias. |
-| [`averias.csv`](file:///Users/jaime/workspace/caidas-luz/averias.csv) | Exportación CSV automática para abrir en Excel, Numbers o Google Sheets. |
-| [`AGENTS.md`](file:///Users/jaime/workspace/caidas-luz/AGENTS.md) | Documentación técnica detallada para Agentes de Inteligencia Artificial (Codex, Claude, etc.). |
+| [`script.py`](script.py) | Script principal de consulta, deduplicación, cálculo de retrasos y generación de informes. |
+| [`docs/index.html`](docs/index.html) | Dashboard visual e interactivo con métricas, gráficos de frecuencia (Chart.js) y control de aplazamientos. |
+| [`averias.db`](averias.db) | Base de datos SQLite3 con el historial unificado y trazabilidad completa de incidencias. |
+| [`averias.csv`](averias.csv) | Exportación CSV automática para abrir en Excel, Numbers o Google Sheets. |
+| [`AGENTS.md`](AGENTS.md) | Documentación técnica detallada para Agentes de Inteligencia Artificial (Codex, Claude, etc.). |
 
 ---
 
@@ -54,15 +54,12 @@ El sistema funciona con Python 3 sin necesidad de instalar librerías externas (
 
 ---
 
-## ⏰ Programación Automática (Cron en macOS / Linux)
+## ⏰ Programación Automática (GitHub Actions)
 
-Para mantener el histórico actualizado cada 10 minutos automáticamente, puedes añadir una tarea a `crontab`:
+El workflow [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) consulta la API cada hora, al minuto 17 UTC, actualiza SQLite, CSV y el dashboard, y guarda los cambios en el repositorio.
 
-```bash
-crontab -e
-```
+Para publicar el dashboard gratis con GitHub Pages, configura en **Settings → Pages**:
 
-Añade la siguiente línea:
-```cron
-*/10 * * * * cd /Users/jaime/workspace/caidas-luz && /usr/bin/python3 script.py > /tmp/caidas_luz_cron.log 2>&1
-```
+- **Source:** Deploy from a branch
+- **Branch:** `main`
+- **Folder:** `/docs`

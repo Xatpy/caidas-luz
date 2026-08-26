@@ -14,7 +14,8 @@ import fcntl
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "averias.db")
 CSV_PATH = os.path.join(BASE_DIR, "averias.csv")
-HTML_PATH = os.path.join(BASE_DIR, "index.html")
+PAGES_DIR = os.path.join(BASE_DIR, "docs")
+HTML_PATH = os.path.join(PAGES_DIR, "index.html")
 LOCK_PATH = os.path.join(BASE_DIR, ".script.lock")
 
 # Endpoint de la API de e-distribución (ArcGIS FeatureServer)
@@ -588,6 +589,7 @@ def generar_html():
 </html>
 """
 
+    os.makedirs(PAGES_DIR, exist_ok=True)
     tmp_html = HTML_PATH + ".tmp"
     with open(tmp_html, "w", encoding="utf-8") as f:
         f.write(html_content)
@@ -639,6 +641,10 @@ def ejecutar_chequeo(municipio="Conil de la Frontera"):
             total_csv = exportar_csv()
             html_file = generar_html()
             print(f" -> DB, CSV ({CSV_PATH}) y Dashboard HTML ({html_file}) actualizados correctamente.")
+            return True
+
+        print("❌ Chequeo cancelado: no se actualizaron los archivos porque la API no respondió correctamente.")
+        return False
     finally:
         try:
             fcntl.flock(lock_file, fcntl.LOCK_UN)
@@ -659,4 +665,4 @@ if __name__ == "__main__":
         print(f"HTML generado en {h}")
     else:
         municipio = sys.argv[2] if len(sys.argv) > 2 else "Conil de la Frontera"
-        ejecutar_chequeo(municipio)
+        sys.exit(0 if ejecutar_chequeo(municipio) else 1)
