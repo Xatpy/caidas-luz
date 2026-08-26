@@ -77,11 +77,17 @@ def init_db():
             longitude REAL,
             first_seen TEXT,
             last_seen TEXT,
+            first_missing_at TEXT,
             resolved_at TEXT,
             missing_count INTEGER DEFAULT 0,
             status TEXT DEFAULT 'ACTIVE'
         )
     """)
+
+    # Migración para bases de datos creadas antes de registrar la primera ausencia.
+    columns = {row[1] for row in cursor.execute("PRAGMA table_info(averias_v2)")}
+    if "first_missing_at" not in columns:
+        cursor.execute("ALTER TABLE averias_v2 ADD COLUMN first_missing_at TEXT")
 
     # Índices para búsquedas rápidas al crecer el histórico
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_averias_muni_status ON averias_v2 (municipality, status);")
@@ -116,6 +122,17 @@ def consultar_api(municipio="Conil de la Frontera"):
         print(f"⚠️ Error al conectar con la API de e-distribución: {e}")
         return None  # Retornar None previene falsas ausencias
 
+def estimar_resolucion(last_seen, first_missing_at):
+    """Estima la resolución como el punto medio entre la última detección y la primera ausencia."""
+    if not last_seen or not first_missing_at:
+        return None
+    try:
+        last_dt = datetime.strptime(last_seen, "%Y-%m-%d %H:%M:%S")
+        missing_dt = datetime.strptime(first_missing_at, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    return last_dt + (missing_dt - last_dt) / 2
+
 def registrar_averias(features, municipio="Conil de la Frontera"):
     """Registra y actualiza las averías identificando extensiones de horario y evitando falsas resoluciones."""
     if features is None:
@@ -130,7 +147,7 @@ def registrar_averias(features, municipio="Conil de la Frontera"):
     # Obtener todas las averías actualmente activas en la DB
     cursor.execute("""
         SELECT id, cd_code, interruption_date, initial_reposition_date, current_reposition_date, 
-               delay_count, latitude, longitude, missing_count, status
+               delay_count, latitude, longitude, missing_count, status, first_missing_at
         FROM averias_v2
         WHERE municipality LIKE ? AND status = 'ACTIVE'
     """, (f"%{municipio}%",))
@@ -156,7 +173,7 @@ def registrar_averias(features, municipio="Conil de la Frontera"):
         # Intentar enlazar con una avería existente (o recién añadida en este mismo ciclo)
         matched_row_idx = None
         for idx, db_row in enumerate(active_in_db):
-            db_id, db_cd, db_start, db_init_repo, db_curr_repo, db_delays, db_lat, db_lon, db_missing, db_status = db_row
+            db_id, db_cd, db_start, db_init_repo, db_curr_repo, db_delays, db_lat, db_lon, db_missing, db_status, db_first_missing = db_row
             
             # Coincidencia por código O por proximidad física (validando que las coordenadas no sean 0.0)
             is_same_code = (db_cd == cd_code and cd_code != "DESCONOCIDO")
@@ -184,6 +201,7 @@ def registrar_averias(features, municipio="Conil de la Frontera"):
                         longitude = ?,
                         last_seen = ?,
                         missing_count = 0,
+                        first_missing_at = NULL,
                         status = 'ACTIVE'
                     WHERE id = ?
                 """, (cd_code, affected_client, reposition_date, new_delays, update_time, latitude, longitude, now_str, db_id))
@@ -216,7 +234,7 @@ def registrar_averias(features, municipio="Conil de la Frontera"):
             # Insertar en memoria para evitar duplicados en la misma iteración
             active_in_db.append([
                 new_id, cd_code, interruption_date, reposition_date, reposition_date,
-                0, latitude, longitude, 0, 'ACTIVE'
+                0, latitude, longitude, 0, 'ACTIVE', None
             ])
             matched_db_ids.add(new_id)
 
@@ -225,20 +243,23 @@ def registrar_averias(features, municipio="Conil de la Frontera"):
         db_id = db_row[0]
         if db_id not in matched_db_ids:
             current_missing = db_row[8] + 1
+            # Solo conocemos la primera ausencia si el registro estaba presente en el chequeo anterior.
+            # Para registros históricos sin este dato, mostramos la última detección en vez de inventar una hora.
+            first_missing_at = db_row[10] or (now_str if db_row[8] == 0 else None)
             if current_missing >= MISSING_THRESHOLD_CHECKS:
-                # Arreglo crítico 3: Guardar el momento actual (now_str) como fecha real de confirmación de resolución
+                # resolved_at es la confirmación; first_missing_at permite acotar/estimar la vuelta de luz.
                 cursor.execute("""
                     UPDATE averias_v2 
-                    SET status = 'RESOLVED', missing_count = ?, resolved_at = ?
+                    SET status = 'RESOLVED', missing_count = ?, first_missing_at = ?, resolved_at = ?
                     WHERE id = ?
-                """, (current_missing, now_str, db_id))
+                """, (current_missing, first_missing_at, now_str, db_id))
                 print(f"  🟢 Avería ID {db_id} [{db_row[1]}] confirmada RESUELTA en {now_str} (tras {current_missing} ausencias).")
             else:
                 cursor.execute("""
                     UPDATE averias_v2 
-                    SET missing_count = ?
+                    SET missing_count = ?, first_missing_at = ?
                     WHERE id = ?
-                """, (current_missing, db_id))
+                """, (current_missing, first_missing_at, db_id))
                 print(f"  ⏳ Avería ID {db_id} [{db_row[1]}] no aparece en API (Ausencia {current_missing}/{MISSING_THRESHOLD_CHECKS}). Manteniendo en seguimiento...")
 
     conn.commit()
@@ -253,7 +274,7 @@ def exportar_csv():
     cursor.execute("""
         SELECT id, cd_code, municipality, territory, service_type, affected_client,
                interruption_date, initial_reposition_date, current_reposition_date, delay_count,
-               update_time, cause, latitude, longitude, first_seen, last_seen, resolved_at, status
+               update_time, cause, latitude, longitude, first_seen, last_seen, first_missing_at, resolved_at, status
         FROM averias_v2
         ORDER BY first_seen DESC
     """)
@@ -264,7 +285,7 @@ def exportar_csv():
         "ID", "Código Centro", "Municipio", "Territorio", "Tipo Servicio", "Clientes Afectados",
         "Fecha Inicio Corte", "Estimación Inicial", "Estimación Actual", "Veces Aplazado",
         "Última Act. API", "Causa", "Latitud", "Longitud", "Primera Detección DB", "Última Detección DB",
-        "Resuelto En", "Estado"
+        "Primera Ausencia Detectada", "Confirmado Resuelto En", "Estado"
     ]
 
     tmp_csv = CSV_PATH + ".tmp"
@@ -285,7 +306,7 @@ def generar_html():
     cursor.execute("""
         SELECT id, cd_code, municipality, territory, service_type, affected_client,
                interruption_date, initial_reposition_date, current_reposition_date, delay_count,
-               update_time, cause, latitude, longitude, first_seen, last_seen, resolved_at, status
+               update_time, cause, latitude, longitude, first_seen, last_seen, first_missing_at, resolved_at, status
         FROM averias_v2
         ORDER BY first_seen DESC
     """)
@@ -293,11 +314,11 @@ def generar_html():
     conn.close()
 
     total_incidencias = len(rows)
-    activas_total = sum(1 for r in rows if r[17] == "ACTIVE")
+    activas_total = sum(1 for r in rows if r[18] == "ACTIVE")
     
     rows_fg = [r for r in rows if es_fuente_del_gallo(r[12], r[13])]
     total_fg = len(rows_fg)
-    activas_fg = sum(1 for r in rows_fg if r[17] == "ACTIVE")
+    activas_fg = sum(1 for r in rows_fg if r[18] == "ACTIVE")
     max_afectados_fg = max([r[5] for r in rows_fg], default=0)
 
     # Conteo por fecha
@@ -311,7 +332,7 @@ def generar_html():
 
     tabla_rows_html = ""
     for r in rows:
-        _id, cd, mun, terr, stype, aff, start, init_repo, curr_repo, delays, upd, cause, lat, lon, first, last, res, status = r
+        _id, cd, mun, terr, stype, aff, start, init_repo, curr_repo, delays, upd, cause, lat, lon, first, last, first_missing, res, status = r
         is_fg = es_fuente_del_gallo(lat, lon)
         
         # Arreglo crítico 6: Escapar adecuadamente todos los textos contra XSS
@@ -319,7 +340,9 @@ def generar_html():
         start_e = html.escape(str(start or ''))
         init_repo_e = html.escape(str(init_repo or ''))
         curr_repo_e = html.escape(str(curr_repo or ''))
-        res_e = html.escape(str(res or 'En curso'))
+        last_e = html.escape(str(last or 'No disponible'))
+        first_missing_e = html.escape(str(first_missing or 'No disponible'))
+        res_e = html.escape(str(res or ''))
         cause_e = html.escape(str(cause or ''))
         
         badge_status = '<span class="badge badge-active">🔴 EN CURSO</span>' if status == "ACTIVE" else '<span class="badge badge-resolved">🟢 RESUELTO</span>'
@@ -330,6 +353,16 @@ def generar_html():
         else:
             delay_info = f'<div>{curr_repo_e or "-"}</div>'
 
+        if status == "RESOLVED":
+            estimated = estimar_resolucion(last, first_missing)
+            if estimated:
+                estimated_e = html.escape(estimated.strftime("%d/%m/%Y %H:%M:%S"))
+                resolution_info = f'<div><strong>~ {estimated_e}</strong><br><small>Ventana: última detección {last_e} → ausente desde {first_missing_e}<br>Confirmada: {res_e}</small></div>'
+            else:
+                resolution_info = f'<div><strong>Resuelta (confirmada)</strong><br><small>Última detección: {last_e}<br>Confirmada: {res_e or "No disponible"}</small></div>'
+        else:
+            resolution_info = 'En curso'
+
         gmaps_url = f"https://www.google.com/maps?q={lat},{lon}"
         
         tabla_rows_html += f"""
@@ -339,7 +372,7 @@ def generar_html():
             <td><strong>{aff}</strong> pers.</td>
             <td>{start_e}</td>
             <td>{delay_info}</td>
-            <td>{res_e}</td>
+            <td>{resolution_info}</td>
             <td>{cause_e}</td>
             <td>{badge_status}</td>
             <td><a href="{gmaps_url}" target="_blank" class="map-link">🌐 Ver Mapa ({lat:.4f}, {lon:.4f})</a></td>
