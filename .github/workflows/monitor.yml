@@ -1,0 +1,33 @@
+name: Monitor Averias e-distribucion
+
+on:
+  schedule:
+    # Se ejecuta cada 2 horas (a los 0 minutos de cada hora par UTC)
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Permite ejecutar el script manualmente desde la pestaña Actions en GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  check-averias:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ejecutar consulta de averías
+        run: python3 script.py
+
+      - name: Commit y push del historial actualizado
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add averias.db averias.csv index.html
+          git diff --quiet && git diff --staged --quiet || (git commit -m "⚡ Auto-update averias [$(date -u +'%Y-%m-%d %H:%M UTC')]" && git push)

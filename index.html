@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial Cortes de Luz - Fuente del Gallo (Conil)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-red: #f43f5e;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --border-color: #334155;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent-blue);
+        }
+        .last-update {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .metric-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .metric-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .metric-sub {
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        .val-red { color: var(--accent-red); }
+        .val-blue { color: var(--accent-blue); }
+        .val-green { color: var(--accent-green); }
+        .val-amber { color: var(--accent-amber); }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin: 32px 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-box {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 32px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .badge-active { background-color: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid #f43f5e; }
+        .badge-resolved { background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+        .badge-fg { background-color: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; }
+        .badge-mun { background-color: rgba(148, 163, 184, 0.2); color: #94a3b8; border: 1px solid #94a3b8; }
+
+        .delay-warning {
+            color: var(--accent-amber);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        th {
+            background-color: #0f172a;
+            color: var(--text-muted);
+            padding: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        tr.row-fg {
+            background-color: rgba(56, 189, 248, 0.05);
+        }
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        .map-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+        .map-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>⚡ Historial de Cortes de Luz - e-distribución</h1>
+                <div style="color: var(--text-muted); font-size: 0.95rem; margin-top: 4px;">Seguimiento en <strong>Fuente del Gallo</strong> y Conil de la Frontera</div>
+            </div>
+            <div class="last-update">
+                Última verificación:<br><strong>26/08/2026 13:40:39</strong>
+            </div>
+        </header>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Fuente del Gallo (En Curso)</div>
+                <div class="metric-value val-red">4</div>
+                <div class="metric-sub val-amber">Máx. 166 vecinos afectados</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Total Fuente del Gallo (Histórico)</div>
+                <div class="metric-value val-blue">4</div>
+                <div class="metric-sub" style="color: var(--text-muted);">Averías registradas</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Total Conil (En Curso)</div>
+                <div class="metric-value val-red">6</div>
+                <div class="metric-sub" style="color: var(--text-muted);">Puntos en todo el municipio</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Total Registros en BD</div>
+                <div class="metric-value val-green">6</div>
+                <div class="metric-sub" style="color: var(--text-muted);">Histórico acumulado</div>
+            </div>
+        </div>
+
+        <div class="section-title">📊 Frecuencia de Averías por Fecha</div>
+        <div class="card-box">
+            <canvas id="frequencyChart" height="90"></canvas>
+        </div>
+
+        <div class="section-title">📋 Registro de Averías (Control de Aplazamientos)</div>
+        <div class="card-box table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código Centro</th>
+                        <th>Zona</th>
+                        <th>Afectados</th>
+                        <th>Inicio Corte</th>
+                        <th>Estimación Reposición / Aplazamientos</th>
+                        <th>Hora Resuelto</th>
+                        <th>Causa</th>
+                        <th>Estado</th>
+                        <th>Ubicación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr class="">
+            <td><strong>22651</strong></td>
+            <td><span class="badge badge-mun">Conil Centro/Otro</span></td>
+            <td><strong>14</strong> pers.</td>
+            <td>26/08/2026 08:30</td>
+            <td><div class="delay-warning">⚠️ Pospuesto 1 vez/veces<br><small>(Inicial: 26/08/2026 13:30 → Actual: 26/08/2026 15:00)</small></div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.30768786,-6.06727047" target="_blank" class="map-link">🌐 Ver Mapa (36.3077, -6.0673)</a></td>
+        </tr>
+        
+        <tr class="row-fg">
+            <td><strong>22653</strong></td>
+            <td><span class="badge badge-fg">📍 Fuente del Gallo</span></td>
+            <td><strong>166</strong> pers.</td>
+            <td>26/08/2026 08:30</td>
+            <td><div class="delay-warning">⚠️ Pospuesto 1 vez/veces<br><small>(Inicial: 26/08/2026 13:30 → Actual: 26/08/2026 15:00)</small></div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.29197794,-6.10686839" target="_blank" class="map-link">🌐 Ver Mapa (36.2920, -6.1069)</a></td>
+        </tr>
+        
+        <tr class="">
+            <td><strong>81129</strong></td>
+            <td><span class="badge badge-mun">Conil Centro/Otro</span></td>
+            <td><strong>8</strong> pers.</td>
+            <td>26/08/2026 08:30</td>
+            <td><div class="delay-warning">⚠️ Pospuesto 1 vez/veces<br><small>(Inicial: 26/08/2026 13:30 → Actual: 26/08/2026 15:00)</small></div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.30237884,-6.07199131" target="_blank" class="map-link">🌐 Ver Mapa (36.3024, -6.0720)</a></td>
+        </tr>
+        
+        <tr class="row-fg">
+            <td><strong>77678</strong></td>
+            <td><span class="badge badge-fg">📍 Fuente del Gallo</span></td>
+            <td><strong>1</strong> pers.</td>
+            <td>26/08/2026 08:30</td>
+            <td><div class="delay-warning">⚠️ Pospuesto 1 vez/veces<br><small>(Inicial: 26/08/2026 13:30 → Actual: 26/08/2026 15:00)</small></div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.29363171,-6.10924983" target="_blank" class="map-link">🌐 Ver Mapa (36.2936, -6.1092)</a></td>
+        </tr>
+        
+        <tr class="row-fg">
+            <td><strong>76499</strong></td>
+            <td><span class="badge badge-fg">📍 Fuente del Gallo</span></td>
+            <td><strong>63</strong> pers.</td>
+            <td>26/08/2026 08:30</td>
+            <td><div class="delay-warning">⚠️ Pospuesto 1 vez/veces<br><small>(Inicial: 26/08/2026 13:30 → Actual: 26/08/2026 15:00)</small></div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.29390209,-6.11148284" target="_blank" class="map-link">🌐 Ver Mapa (36.2939, -6.1115)</a></td>
+        </tr>
+        
+        <tr class="row-fg">
+            <td><strong>76500</strong></td>
+            <td><span class="badge badge-fg">📍 Fuente del Gallo</span></td>
+            <td><strong>84</strong> pers.</td>
+            <td>26/08/2026 08:30</td>
+            <td><div class="delay-warning">⚠️ Pospuesto 1 vez/veces<br><small>(Inicial: 26/08/2026 13:30 → Actual: 26/08/2026 15:00)</small></div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.29615095,-6.11592889" target="_blank" class="map-link">🌐 Ver Mapa (36.2962, -6.1159)</a></td>
+        </tr>
+        
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('frequencyChart').getContext('2d');
+        const dates = ["26/08/2026"];
+        const counts = [6];
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Número de Averías Registradas',
+                    data: counts,
+                    backgroundColor: '#38bdf8',
+                    borderColor: '#0284c7',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#f8fafc' } }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#334155' }, beginAtZero: true }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
