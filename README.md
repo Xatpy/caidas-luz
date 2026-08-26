@@ -56,7 +56,7 @@ El sistema funciona con Python 3 sin necesidad de instalar librerías externas (
 
 ## ⏰ Programación Automática (GitHub Actions)
 
-El workflow [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) consulta la API cada hora, al minuto 17 UTC, actualiza SQLite, CSV y el dashboard, y guarda los cambios en el repositorio.
+El workflow [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) consulta la API cada 30 minutos, en los minutos 17 y 47 UTC, actualiza SQLite, CSV y el dashboard, y guarda los cambios en el repositorio.
 
 Para publicar el dashboard gratis con GitHub Pages, configura en **Settings → Pages**:
 
