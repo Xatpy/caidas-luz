@@ -2,7 +2,7 @@ name: Monitor Averias e-distribucion
 
 on:
   schedule:
-    # Cada 30 minutos: a los minutos 17 y 47 UTC, evitando el inicio de la hora.
+    # Cada 30 minutos: en los minutos 17 y 47 UTC, evitando el inicio de la hora.
     - cron: '17,47 * * * *'
   workflow_dispatch: # Permite ejecutar el script manualmente desde la pestaña Actions en GitHub
 
