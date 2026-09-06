@@ -152,7 +152,7 @@
                 <div style="color: var(--text-muted); font-size: 0.95rem; margin-top: 4px;">Seguimiento en <strong>Fuente del Gallo</strong> y Conil de la Frontera</div>
             </div>
             <div class="last-update">
-                Última verificación:<br><strong>06/09/2026 18:39:39</strong>
+                Última verificación:<br><strong>06/09/2026 20:52:04</strong>
             </div>
         </header>
 
@@ -169,12 +169,12 @@
             </div>
             <div class="metric-card">
                 <div class="metric-title">Total Conil (En Curso)</div>
-                <div class="metric-value val-red">0</div>
+                <div class="metric-value val-red">1</div>
                 <div class="metric-sub" style="color: var(--text-muted);">Puntos en todo el municipio</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Total Registros en BD</div>
-                <div class="metric-value val-green">7</div>
+                <div class="metric-value val-green">8</div>
                 <div class="metric-sub" style="color: var(--text-muted);">Histórico acumulado</div>
             </div>
         </div>
@@ -202,6 +202,18 @@
                 </thead>
                 <tbody>
                     
+        <tr class="">
+            <td><strong>22650</strong></td>
+            <td><span class="badge badge-mun">Conil Centro/Otro</span></td>
+            <td><strong>1</strong> pers.</td>
+            <td>06/09/2026 22:09</td>
+            <td><div>06/09/2026 23:45</div></td>
+            <td>En curso</td>
+            <td>Avería</td>
+            <td><span class="badge badge-active">🔴 EN CURSO</span></td>
+            <td><a href="https://www.google.com/maps?q=36.32082785,-6.14561252" target="_blank" class="map-link">🌐 Ver Mapa (36.3208, -6.1456)</a></td>
+        </tr>
+        
         <tr class="">
             <td><strong>22676</strong></td>
             <td><span class="badge badge-mun">Conil Centro/Otro</span></td>
@@ -293,8 +305,8 @@
 
     <script>
         const ctx = document.getElementById('frequencyChart').getContext('2d');
-        const dates = ["28/08/2026", "26/08/2026"];
-        const counts = [1, 6];
+        const dates = ["06/09/2026", "28/08/2026", "26/08/2026"];
+        const counts = [1, 1, 6];
 
         new Chart(ctx, {
             type: 'bar',
